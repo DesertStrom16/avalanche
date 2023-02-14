@@ -38,6 +38,9 @@ const testFunc = async () => {
         .videoRenderer;
 
     console.log(videoData.title.runs[0].text);
+    console.log(videoData.navigationEndpoint.commandMetadata.webCommandMetadata.url);
+    // other video url for hover over play? it plays it at half speed/chopped up so...
+    // probably useful to emulate.
   }
 };
 

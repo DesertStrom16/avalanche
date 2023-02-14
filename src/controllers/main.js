@@ -1,19 +1,80 @@
 const axios = require("axios");
+const cheerio = require("cheerio");
 
-const cookie =
-  "GPS=1; YSC=4H9FkQ55x2Q; DEVICE_INFO=ChxOekU1TlRBek1UazNOams1TVRBNE5qZzBOUT09EPbG554GGPbG554G; VISITOR_INFO1_LIVE=PvO_bHIGRtA; PREF=f4=4000000&tz=America.Los_Angeles; SID=TQjpAdF4SH53zKza0WVwkfQnIyQUM5C4-gohzCaqwxOiwrb5M0sAJVhV8-9lp1SMy3I-Rw.; __Secure-1PSID=TQjpAdF4SH53zKza0WVwkfQnIyQUM5C4-gohzCaqwxOiwrb55VAC-DpNjFR25sIkK3Kumg.; __Secure-3PSID=TQjpAdF4SH53zKza0WVwkfQnIyQUM5C4-gohzCaqwxOiwrb5dZmFgJUW2UW4b_w5goQxQQ.; HSID=Aid7bhdF-gGpr5lr9; SSID=AJNaZFjvc-PnvrloZ; APISID=Y_u_hUqXksvtcYQv/Ac9pJmPTJonhnWhFz; SAPISID=Qwcn8JzTeZoD4oZ2/AWgs12y2goCGv_9db; __Secure-1PAPISID=Qwcn8JzTeZoD4oZ2/AWgs12y2goCGv_9db; __Secure-3PAPISID=Qwcn8JzTeZoD4oZ2/AWgs12y2goCGv_9db; LOGIN_INFO=AFmmF2swRgIhAIJgs7WhEcXYSmRAuGl9cudhJ6M4HgSmEP-eqKpPSfClAiEAtXNE3gykt5FrPS5ckDvT3F7AoJYo0gbmrhbEGNvXpf8:QUQ3MjNmd1ZwOEF6clpIT053ZlJnSVV6SzRrZlg5VzNpaE12LThidnIwSFFmYU1sWmQyTDZKVXhPZ2tfMmZmY2otQjB0SGw4UDYxN0VRYVo5dFJURHM0S19xTnAwTnVPY1F2OUlPUkV3TjZtZ1BGYm01bUE3UUYzeGJwY09DSXFtMWpGV05Jb0Zod3pmR3MwOWw5RWRxbnBIb1c0ek1kLUNn; SIDCC=AFvIBn9vkj7KtyoNGPD1JwzADm6FohnE4qa_X0r7ItVt7X9ClwMFA3ZtU72HXol6U8-34pbV; __Secure-1PSIDCC=AFvIBn8qVafUjkA-yGvypQoE2JshYz6bgvEOKNJ6amdIU6FiU5QYYn6zSTbAEkE5rnpHiSpcUw; __Secure-3PSIDCC=AFvIBn9_mjzc3zw2D1xy-JyzYoEiIPQizuqNIalk87tYH-NUMOq3IncBsOLOopMMCGfwtANA6g";
+exports.fetchAutoSearch = async (req, res) => {
+  const term = req.query.q;
 
-exports.fetch = async (req, res) => {
-  try {
-    const response = await axios.request({
-      url: "https://www.youtube.com/",
-      method: "get",
-      headers: {
-        Cookie: cookie,
-      },
+  await axios
+    .get(process.env.AUTO_SEARCH_URL + `&q=${term}&xhr=t`)
+    .then(function (response) {
+      const autoSearchTerms = [];
+
+      if (response.data[1]) {
+        response.data[1].forEach((item) => {
+          autoSearchTerms.push(item[0]);
+        });
+        console.log(autoSearchTerms);
+      }
+    })
+    .catch(function (error) {
+      // handle error
+      console.log(error);
     });
-    console.log(response);
-  } catch (error) {
-    console.error(error);
-  }
+
+  res.json({ msg: "hey" });
+};
+
+exports.fetchSearch = async (req, res) => {
+  const term = req.query.q;
+
+  await axios
+    .get(`https://www.youtube.com/results?search_query=${term}`)
+    .then(function (response) {
+      if (response.data) {
+        let beginning = response.data.indexOf("responseContext");
+        let firstString = response.data.substring(beginning - 2);
+        let end = firstString.indexOf("</script>");
+        let finalString = firstString.substring(0, end - 1);
+        let stringToJson = JSON.parse(finalString);
+        let contentObj =
+          stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
+            .sectionListRenderer.contents[0].itemSectionRenderer.contents;
+
+        let content = [];
+
+        contentObj.forEach((item) => {
+          if (item.videoRenderer) {
+            console.log(item.videoRenderer.title.runs[0].text);
+
+            const title = item.videoRenderer.title.runs[0].text;
+            const channel = item.videoRenderer.ownerText.runs[0].text;
+            const thumbnailUrl = item.videoRenderer.thumbnail.thumbnails;
+            const avatarUrl =
+              item.videoRenderer.channelThumbnailSupportedRenderers
+                .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
+            const viewCount = item.videoRenderer.shortViewCountText.simpleText;
+            const uploadDate = item.videoRenderer?.publishedTimeText?.simpleText ?? '';
+            const length = item.videoRenderer.lengthText.simpleText;
+            const videoId = item.videoRenderer.videoId;
+
+            content.push({
+              title: title,
+              channel: channel,
+              viewCount: viewCount,
+              uploadDate: uploadDate,
+              length: length,
+              videoId: videoId,
+              thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
+              avatarUrl: avatarUrl[avatarUrl.length - 1].url,
+            });
+          }
+        });
+
+        res.json(content);
+      }
+    })
+    .catch(function (error) {
+      // handle error
+      console.log(error);
+    });
 };

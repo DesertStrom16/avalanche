@@ -1,3 +1,4 @@
+require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
@@ -21,12 +22,12 @@ app.use((req, res, next) => {
 app.get("/favicon.ico", (req, res) => res.status(204));
 
 // Routes Import
-const authRoute = require("./src/routes/main");
+const mainRoute = require("./src/routes/main");
 
 // Set Routes
-app.use("/main", authRoute);
+app.use("/main", mainRoute);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8000;
 
 app.listen(PORT);
 
