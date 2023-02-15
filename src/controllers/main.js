@@ -3,11 +3,11 @@ const cheerio = require("cheerio");
 
 exports.fetchAutoSearch = async (req, res) => {
   const term = req.query.q;
+  const autoSearchTerms = [];
 
   await axios
     .get(process.env.AUTO_SEARCH_URL + `&q=${term}&xhr=t`)
     .then(function (response) {
-      const autoSearchTerms = [];
 
       if (response.data[1]) {
         response.data[1].forEach((item) => {
@@ -21,7 +21,7 @@ exports.fetchAutoSearch = async (req, res) => {
       console.log(error);
     });
 
-  res.json({ msg: "hey" });
+  res.json({ data: autoSearchTerms });
 };
 
 exports.fetchSearch = async (req, res) => {
@@ -30,9 +30,10 @@ exports.fetchSearch = async (req, res) => {
   await axios
     .get(`https://www.youtube.com/results?search_query=${term}`)
     .then(function (response) {
-      if (response.data) {
-        let beginning = response.data.indexOf("responseContext");
-        let firstString = response.data.substring(beginning - 2);
+      const data = response.data;
+      if (data) {
+        let beginning = data.indexOf("responseContext");
+        let firstString = data.substring(beginning - 2);
         let end = firstString.indexOf("</script>");
         let finalString = firstString.substring(0, end - 1);
         let stringToJson = JSON.parse(finalString);
