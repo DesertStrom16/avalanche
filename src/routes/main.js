@@ -10,4 +10,7 @@ router.get("/fetchAutoSearch", feedController.fetchAutoSearch);
 // GET /main/fetchSearch
 router.get("/fetchSearch", feedController.fetchSearch);
 
+// GET /main/fetchSearchPaginate
+router.get("/fetchSearchPaginate", feedController.fetchSearchPaginate);
+
 module.exports = router;

@@ -2,6 +2,8 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
+const puppeteer = require("puppeteer");
+const { paginateSearchHandler } = require("./src/functions/searchHandler");
 
 const app = express();
 
@@ -29,7 +31,28 @@ app.use("/main", mainRoute);
 
 const PORT = process.env.PORT || 8000;
 
-app.listen(PORT);
+const server = app.listen(PORT);
+
+const io = require("./socket").init(server);
+app.set("io", io);
+
+io.on("connection", async (socket) => {
+  app.set("socket", socket);
+  console.log("Client Connected");
+
+  // Start Puppeteer Browser
+  const browser = await puppeteer.launch({headless: false});
+
+  socket.on("getPaginateSearch", async (query) => {
+    paginateSearchHandler(query, browser, io);
+  });
+
+  // On Disconnect
+  socket.on("disconnect", async (reason) => {
+    console.log("Client Disconnected");
+    await browser.close();
+  });
+});
 
 console.log("----------------------");
 console.log(`Listening on Port ${PORT}`);
