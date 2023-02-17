@@ -41,10 +41,39 @@ io.on("connection", async (socket) => {
   console.log("Client Connected");
 
   // Start Puppeteer Browser
-  const browser = await puppeteer.launch({headless: false});
+  const browser = await puppeteer.launch({ headless: false });
+  let paginatePage;
 
+  // First paginated results
   socket.on("getPaginateSearch", async (query) => {
-    paginateSearchHandler(query, browser, io);
+    console.log("SOCKET ON: getPaginateSearch");
+
+    paginatePage = await browser.newPage();
+    await paginatePage.goto(
+      `https://www.youtube.com/results?search_query=${query}`,
+      {
+        waitUntil: "networkidle2",
+      }
+    );
+    await paginatePage.mouse.move(100, 100);
+
+    paginateSearchHandler(paginatePage, socket);
+  });
+
+  // Continued paginated results
+  socket.on("continuePaginateSearch", async (query) => {
+    console.log("SOCKET ON: continuePaginateSearch");
+
+    paginateSearchHandler(paginatePage, socket);
+  });
+
+  // Close paginated results
+  socket.on("closePaginateSearch", async (query) => {
+    console.log("SOCKET ON: closePaginateSearch");
+
+    if (paginatePage) {
+      await paginatePage.close();
+    }
   });
 
   // On Disconnect

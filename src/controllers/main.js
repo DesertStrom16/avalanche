@@ -70,7 +70,7 @@ exports.fetchSearch = async (req, res) => {
               videoId: videoId,
               thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
               avatarUrl: avatarUrl[avatarUrl.length - 1].url,
-              apiKey: apiKey,
+              // apiKey: apiKey,
               // cookie: null,
             });
           }
