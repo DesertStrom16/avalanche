@@ -3,6 +3,7 @@ const paginateSearchHandler = async (page, socket) => {
     if (
       response.url().includes("https://www.youtube.com/youtubei/v1/search?key=")
     ) {
+      console.log("DATA HERE")
       let data = await response.json();
       // filter for video data them emit from here
       // Afterwords close page. Keeps browser open and pages accounted for

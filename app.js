@@ -44,9 +44,9 @@ io.on("connection", async (socket) => {
   const browser = await puppeteer.launch({ headless: false });
   let paginatePage;
 
-  // First paginated results
-  socket.on("getPaginateSearch", async (query) => {
-    console.log("SOCKET ON: getPaginateSearch");
+  // Prepare paginate page
+  socket.on("preparePaginateSearch", async (query) => {
+    console.log("SOCKET ON: preparePaginateSearch");
 
     paginatePage = await browser.newPage();
     await paginatePage.goto(
@@ -55,7 +55,17 @@ io.on("connection", async (socket) => {
         waitUntil: "networkidle2",
       }
     );
+
+    // Lower so not starting autoplay on hover?
     await paginatePage.mouse.move(100, 100);
+  })
+
+
+  // Don't need seperate ones now??
+
+  // First paginated results
+  socket.on("getPaginateSearch", async (query) => {
+    console.log("SOCKET ON: getPaginateSearch");
 
     paginateSearchHandler(paginatePage, socket);
   });
