@@ -56,10 +56,8 @@ io.on("connection", async (socket) => {
       }
     );
 
-    // Lower so not starting autoplay on hover?
-    await paginatePage.mouse.move(100, 100);
-  })
-
+    await paginatePage.mouse.move(20, 20);
+  });
 
   // Don't need seperate ones now??
 
@@ -75,6 +73,12 @@ io.on("connection", async (socket) => {
     console.log("SOCKET ON: continuePaginateSearch");
 
     paginateSearchHandler(paginatePage, socket);
+  });
+
+  // RTK Query Test
+  socket.on("startTest", async (query) => {
+    console.log("SOCKET ON: startTest");
+    socket.emit("streamingTest", { txt: "hey there" });
   });
 
   // Close paginated results
