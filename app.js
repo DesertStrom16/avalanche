@@ -40,23 +40,16 @@ io.on("connection", async (socket) => {
   app.set("socket", socket);
   console.log("Client Connected");
 
-  // Start Puppeteer Browser
-  const browser = await puppeteer.launch({ headless: false });
   let paginatePage;
 
   // Prepare paginate page
   socket.on("preparePaginateSearch", async (query) => {
     console.log("SOCKET ON: preparePaginateSearch");
-
-    paginatePage = await browser.newPage();
-    await paginatePage.goto(
-      `https://www.youtube.com/results?search_query=${query}`,
-      {
-        waitUntil: "networkidle2",
-      }
-    );
-
-    await paginatePage.mouse.move(20, 20);
+    // paginatePage = app.get("paginatePage");
+    paginatePage = app.get("paginatePage");
+    await paginatePage.waitForNavigation({ waitUntil: 'networkidle0' })
+    console.log("COMPLETED LOADING")
+    // await paginatePage.mouse.move(20, 20);
   });
 
   // Don't need seperate ones now??
@@ -64,8 +57,26 @@ io.on("connection", async (socket) => {
   // First paginated results
   socket.on("getPaginateSearch", async (query) => {
     console.log("SOCKET ON: getPaginateSearch");
+    paginatePage = app.get("paginatePage");
+    console.log(paginatePage)
 
-    paginateSearchHandler(paginatePage, socket);
+    let isLoadingCompleted = app.get("paginateLoadingComplete");
+    console.log(isLoadingCompleted);
+    if (isLoadingCompleted) {
+      await paginatePage.mouse.move(20, 20);
+
+      paginateSearchHandler(paginatePage, socket);
+      app.set("paginateLoadingComplete", false);
+    } else {
+      // Wait for Page Idle
+      await paginatePage.waitForNetworkIdle();
+        console.log("IDLE");
+
+        await paginatePage.mouse.move(20, 20);
+  
+        paginateSearchHandler(paginatePage, socket);
+        app.set("paginateLoadingComplete", false);
+    }
   });
 
   // Continued paginated results
@@ -93,7 +104,13 @@ io.on("connection", async (socket) => {
   // On Disconnect
   socket.on("disconnect", async (reason) => {
     console.log("Client Disconnected");
-    await browser.close();
+    app.set("paginateLoadingComplete", false);
+    app.set("paginatePage", undefined);
+    let browser = app.get("browser");
+    if (browser) {
+      await browser.close();
+      app.set("browser", undefined);
+    }
   });
 });
 
