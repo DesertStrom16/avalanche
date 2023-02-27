@@ -1,22 +1,27 @@
 const paginateSearchHandler = async (page, socket) => {
+  let hasFired = false;
   page.on("response", async (response) => {
     if (
       response.url().includes("https://www.youtube.com/youtubei/v1/search?key=")
     ) {
-      console.log("DATA HERE")
-      let data = await response.json();
-      // filter for video data them emit from here
-      // Afterwords close page. Keeps browser open and pages accounted for
-      // i.e. no general listener statements (page.on) outside socket calls
+      console.log("DATA HERE");
+      if (!hasFired) {
+        hasFired = true;
+        console.log("ACTUALLY FIRING");
+        let data = await response.json();
+        // filter for video data them emit from here
+        // Afterwords close page. Keeps browser open and pages accounted for
+        // i.e. no general listener statements (page.on) outside socket calls
 
-      let resData =
-        data.onResponseReceivedCommands[0].appendContinuationItemsAction
-          .continuationItems[0].itemSectionRenderer.contents;
+        let resData =
+          data.onResponseReceivedCommands[0].appendContinuationItemsAction
+            .continuationItems[0].itemSectionRenderer.contents;
 
-      let content = dataParseHandler(resData);
+        let content = dataParseHandler(resData);
 
-      // Finished, emit response.
-      socket.emit("paginateSearchReponse", content);
+        // Finished, emit response.
+        socket.emit("paginateSearchReponse", content);
+      }
     }
   });
 
@@ -27,10 +32,11 @@ const paginateSearchHandler = async (page, socket) => {
 
 const dataParseHandler = (data) => {
   let content = [];
-  data.forEach((item) => {
+  data.forEach((item, index) => {
     if (item.videoRenderer) {
       let vid = item.videoRenderer;
-      const title = vid.title.runs[0].text;
+      const title = index;
+      // const title = vid.title.runs[0].text;
       const channel = vid.ownerText.runs[0].text;
       const thumbnailUrl = vid.thumbnail.thumbnails;
       const avatarUrl =

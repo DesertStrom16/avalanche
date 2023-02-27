@@ -37,53 +37,60 @@ const io = require("./socket").init(server);
 app.set("io", io);
 
 io.on("connection", async (socket) => {
-  app.set("socket", socket);
   console.log("Client Connected");
+  app.set("socket", socket);
 
+  // Start Puppeteer Browser
+  const browser = await puppeteer.launch({ headless: false });
   let paginatePage;
-
-  // Prepare paginate page
-  socket.on("preparePaginateSearch", async (query) => {
-    console.log("SOCKET ON: preparePaginateSearch");
-    // paginatePage = app.get("paginatePage");
-    paginatePage = app.get("paginatePage");
-    await paginatePage.waitForNavigation({ waitUntil: 'networkidle0' })
-    console.log("COMPLETED LOADING")
-    // await paginatePage.mouse.move(20, 20);
-  });
-
-  // Don't need seperate ones now??
 
   // First paginated results
   socket.on("getPaginateSearch", async (query) => {
     console.log("SOCKET ON: getPaginateSearch");
-    paginatePage = app.get("paginatePage");
-    console.log(paginatePage)
 
-    let isLoadingCompleted = app.get("paginateLoadingComplete");
-    console.log(isLoadingCompleted);
-    if (isLoadingCompleted) {
-      await paginatePage.mouse.move(20, 20);
+    paginatePage = await browser.newPage();
 
-      paginateSearchHandler(paginatePage, socket);
-      app.set("paginateLoadingComplete", false);
-    } else {
-      // Wait for Page Idle
-      await paginatePage.waitForNetworkIdle();
-        console.log("IDLE");
+    await paginatePage.goto(
+      `https://www.youtube.com/results?search_query=${query}`,
+      {
+        waitUntil: "networkidle2",
+      }
+    );
 
-        await paginatePage.mouse.move(20, 20);
-  
-        paginateSearchHandler(paginatePage, socket);
-        app.set("paginateLoadingComplete", false);
-    }
+    await paginatePage.mouse.move(20, 20);
+
+    paginateSearchHandler(paginatePage, socket, 0);
   });
 
-  // Continued paginated results
-  socket.on("continuePaginateSearch", async (query) => {
-    console.log("SOCKET ON: continuePaginateSearch");
+  // // For Homepage Paginate
+  // socket.on("getPaginateSearch", async (query) => {
+  //   console.log("SOCKET ON: getPaginateSearch");
 
-    paginateSearchHandler(paginatePage, socket);
+  //   paginatePage = app.get("paginatePage");
+
+  //   let isLoadingCompleted = app.get("paginateLoadingComplete");
+  //   if (isLoadingCompleted) {
+  //     await paginatePage.mouse.move(20, 20);
+
+  //     paginateSearchHandler(paginatePage, socket);
+  //     app.set("paginateLoadingComplete", false);
+  //   } else {
+  //     // Wait for Page Idle
+  //     await paginatePage.waitForNetworkIdle();
+
+  //     await paginatePage.mouse.move(20, 20);
+
+  //     paginateSearchHandler(paginatePage, socket);
+  //     app.set("paginateLoadingComplete", false);
+  //   }
+  // });
+
+  // Continued paginated results
+  socket.on("continuePaginateSearch", async ({query, iteration}) => {
+    console.log("SOCKET ON: continuePaginateSearch");
+    console.log("iteration:", iteration)
+
+    paginateSearchHandler(paginatePage, socket, iteration);
   });
 
   // RTK Query Test
@@ -104,14 +111,26 @@ io.on("connection", async (socket) => {
   // On Disconnect
   socket.on("disconnect", async (reason) => {
     console.log("Client Disconnected");
-    app.set("paginateLoadingComplete", false);
-    app.set("paginatePage", undefined);
-    let browser = app.get("browser");
-    if (browser) {
-      await browser.close();
-      app.set("browser", undefined);
-    }
+
+    await browser.close();
   });
+
+  // // For Homepage Disconnect
+  // socket.on("disconnect", async (reason) => {
+  //   console.log("Client Disconnected");
+
+  //   if (paginatePage) {
+  //     await paginatePage.close();
+  //   }
+
+  //   app.set("paginateLoadingComplete", false);
+  //   app.set("paginatePage", undefined);
+  //   let browser = app.get("browser");
+  //   if (browser) {
+  //     await browser.close();
+  //     app.set("browser", undefined);
+  //   }
+  // });
 });
 
 console.log("----------------------");

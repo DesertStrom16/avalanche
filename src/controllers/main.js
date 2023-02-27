@@ -22,18 +22,17 @@ const initialSearchResponseParser = (data) => {
 
     contentObj.forEach((item) => {
       if (item.videoRenderer) {
-        const title = item.videoRenderer.title.runs[0].text;
-        const channel = item.videoRenderer.ownerText.runs[0].text;
-        const thumbnailUrl = item.videoRenderer.thumbnail.thumbnails;
+        const vidItem = item.videoRenderer;
+        const title = vidItem.title.runs[0].text;
+        const channel = vidItem.ownerText.runs[0].text;
+        const thumbnailUrl = vidItem.thumbnail.thumbnails;
         const avatarUrl =
-          item.videoRenderer.channelThumbnailSupportedRenderers
+          vidItem.channelThumbnailSupportedRenderers
             .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
-        const viewCount =
-          item.videoRenderer?.shortViewCountText?.simpleText ?? "";
-        const uploadDate =
-          item.videoRenderer?.publishedTimeText?.simpleText ?? "";
-        const length = item.videoRenderer?.lengthText?.simpleText ?? "";
-        const videoId = item.videoRenderer.videoId;
+        const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
+        const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
+        const length = vidItem.lengthText?.simpleText ?? "";
+        const videoId = vidItem.videoId;
 
         content.push({
           title: title,
@@ -75,79 +74,62 @@ exports.fetchAutoSearch = async (req, res) => {
   res.json({ data: autoSearchTerms });
 };
 
-exports.fetchSearch = async (req, res) => {
+exports.fetchSearch = async (req, res, next) => {
   const query = req.query.q;
-  const app = req.app;
-
-  // Start Puppeteer Browser
-  const browser = await puppeteer.launch({ headless: false });
-  app.set("browser", browser);
-
-  let paginatePage = await browser.newPage();
-  app.set("paginatePage", paginatePage);
-
-  paginatePage.on("response", async (response) => {
-    if (
-      response
-        .url()
-        .includes(`https://www.youtube.com/results?search_query=${query}`)
-    ) {
-      console.log("DATA HERE");
-      // let data = await response.json();
-      let resData = await response.text();
-      let content = initialSearchResponseParser(resData);
-      
-      res.json(content);
-    }
-  });
-
-  paginatePage
-    .goto(`https://www.youtube.com/results?search_query=${query}`, {
-      waitUntil: "networkidle2",
-    })
-    .then(() => {
-      console.log("WHATS GOING ON")
-      app.set("paginateLoadingComplete", true);
-    });
-
-  // app.get('browser')
-  // app.get('paginatePage')
-
-  // paginatePage = await browser.newPage();
-
-  // await paginatePage.mouse.move(20, 20);
-
-  // await axios
-  //   .get(`https://www.youtube.com/results?search_query=${query}`)
-  //   .then(function (response) {
-  //     const data = response.data;
-  //     if (data) {
-  //       let content = initialSearchResponseParser(data);
-
-  //       res.json(content);
-  //     }
-  //   })
-  //   .catch(function (error) {
-  //     // handle error
-  //     console.log(error);
-  //   });
-};
-
-exports.fetchSearchPaginate = async (req, res) => {
-  // const term = req.query.q;
 
   await axios
-    .post(
-      `https://www.youtube.com/youtubei/v1/search?key=AIzaSyAO_FJ2SlqU8Q4STEHLGCilw_Y9_11qcW8&prettyPrint=false`
-    )
+    .get(`https://www.youtube.com/results?search_query=${query}`)
     .then(function (response) {
-      // console.log(response.headers['set-cookie']);
       const data = response.data;
       if (data) {
-        res.send(data);
+        let content = initialSearchResponseParser(data);
+        if (content.length > 0) {
+          res.json(content);
+        } else {
+          res.sendStatus(500);
+        }
+
+        // res.sendStatus(500);
       }
     })
     .catch(function (error) {
-      console.log(error);
+      // handle error
+      // console.log(error);
+      next(error);
     });
 };
+// exports.fetchSearch = async (req, res) => {
+//   const query = req.query.q;
+//   const app = req.app;
+
+//   // Start Puppeteer Browser
+//   const browser = await puppeteer.launch({ headless: false });
+//   app.set("browser", browser);
+
+//   let paginatePage = await browser.newPage();
+//   app.set("paginatePage", paginatePage);
+
+//   paginatePage.on("response", async (response) => {
+//     if (
+//       response
+//         .url()
+//         .includes(`https://www.youtube.com/results?search_query=${query}`)
+//     ) {
+//       console.log("DATA HERE");
+//       // let data = await response.json();
+//       let resData = await response.text();
+//       let content = initialSearchResponseParser(resData);
+
+//       res.json(content);
+//     }
+//   });
+
+//   paginatePage
+//     .goto(`https://www.youtube.com/results?search_query=${query}`, {
+//       waitUntil: "networkidle2",
+//     })
+//     .then(() => {
+//       console.log("WHATS GOING ON");
+//       app.set("paginateLoadingComplete", true);
+//     });
+// };
