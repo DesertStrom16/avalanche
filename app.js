@@ -2,8 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const morgan = require("morgan");
-const puppeteer = require("puppeteer");
-const { paginateSearchHandler } = require("./src/functions/searchHandler");
+const axios = require("axios");
 
 const app = express();
 
@@ -25,12 +24,14 @@ app.get("/favicon.ico", (req, res) => res.status(204));
 
 // Routes Import
 const mainRoute = require("./src/routes/main");
+const { videoParser } = require("./src/functions/parseHandler");
 
 // Set Routes
 app.use("/main", mainRoute);
 
 const PORT = process.env.PORT || 8000;
 
+// ---- Uninstall Puppeteer and Cheerio ----
 const server = app.listen(PORT);
 
 const io = require("./socket").init(server);
@@ -40,97 +41,53 @@ io.on("connection", async (socket) => {
   console.log("Client Connected");
   app.set("socket", socket);
 
-  // Start Puppeteer Browser
-  const browser = await puppeteer.launch({ headless: false });
-  let paginatePage;
-
-  // First paginated results
-  socket.on("getPaginateSearch", async (query) => {
+  // Paginate Search Results
+  socket.on("getPaginateSearch", async ({ client, token, key }) => {
     console.log("SOCKET ON: getPaginateSearch");
 
-    paginatePage = await browser.newPage();
+    // ---- Still need cookies??? ----
 
-    await paginatePage.goto(
-      `https://www.youtube.com/results?search_query=${query}`,
-      {
-        waitUntil: "networkidle2",
-      }
-    );
+    await axios
+      .post(
+        `https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`,
+        { continuation: token, context: { client: client } }
+      )
+      .then(function (response) {
+        const data = response.data;
+        if (data) {
+          let newToken =
+            data.onResponseReceivedCommands[0].appendContinuationItemsAction
+              .continuationItems[1].continuationItemRenderer
+              .continuationEndpoint.continuationCommand.token;
 
-    await paginatePage.mouse.move(20, 20);
+          let newContent =
+            data.onResponseReceivedCommands[0].appendContinuationItemsAction
+              .continuationItems[0].itemSectionRenderer.contents;
 
-    paginateSearchHandler(paginatePage, socket, 0);
-  });
+          let contentParsed = videoParser(newContent);
 
-  // // For Homepage Paginate
-  // socket.on("getPaginateSearch", async (query) => {
-  //   console.log("SOCKET ON: getPaginateSearch");
+          socket.emit("paginateSearchReponse", {
+            token: newToken,
+            content: contentParsed,
+          });
 
-  //   paginatePage = app.get("paginatePage");
-
-  //   let isLoadingCompleted = app.get("paginateLoadingComplete");
-  //   if (isLoadingCompleted) {
-  //     await paginatePage.mouse.move(20, 20);
-
-  //     paginateSearchHandler(paginatePage, socket);
-  //     app.set("paginateLoadingComplete", false);
-  //   } else {
-  //     // Wait for Page Idle
-  //     await paginatePage.waitForNetworkIdle();
-
-  //     await paginatePage.mouse.move(20, 20);
-
-  //     paginateSearchHandler(paginatePage, socket);
-  //     app.set("paginateLoadingComplete", false);
-  //   }
-  // });
-
-  // Continued paginated results
-  socket.on("continuePaginateSearch", async ({query, iteration}) => {
-    console.log("SOCKET ON: continuePaginateSearch");
-    console.log("iteration:", iteration)
-
-    paginateSearchHandler(paginatePage, socket, iteration);
-  });
-
-  // RTK Query Test
-  socket.on("startTest", async (query) => {
-    console.log("SOCKET ON: startTest");
-    socket.emit("streamingTest", { txt: "hey there" });
-  });
-
-  // Close paginated results
-  socket.on("closePaginateSearch", async (query) => {
-    console.log("SOCKET ON: closePaginateSearch");
-
-    if (paginatePage) {
-      await paginatePage.close();
-    }
+          // let resObj = initialSearchResponseParser(resData);
+          // if (resObj && resObj.content.length > 0) {
+          //   res.json(resObj);
+          // } else {
+          //   res.sendStatus(500);
+          // }
+        }
+      })
+      .catch(function (error) {
+        console.log(error);
+      });
   });
 
   // On Disconnect
-  socket.on("disconnect", async (reason) => {
+  socket.on("disconnect", (reason) => {
     console.log("Client Disconnected");
-
-    await browser.close();
   });
-
-  // // For Homepage Disconnect
-  // socket.on("disconnect", async (reason) => {
-  //   console.log("Client Disconnected");
-
-  //   if (paginatePage) {
-  //     await paginatePage.close();
-  //   }
-
-  //   app.set("paginateLoadingComplete", false);
-  //   app.set("paginatePage", undefined);
-  //   let browser = app.get("browser");
-  //   if (browser) {
-  //     await browser.close();
-  //     app.set("browser", undefined);
-  //   }
-  // });
 });
 
 console.log("----------------------");

@@ -1,57 +1,5 @@
 const axios = require("axios");
-const cheerio = require("cheerio");
-const puppeteer = require("puppeteer");
-
-const initialSearchResponseParser = (data) => {
-  if (data) {
-    // Scrape api key
-    let apiBeginning = data.indexOf("innertubeApiKey");
-    let apiEnd = data.indexOf("innertubeApiVersion");
-    const apiKey = data.substring(apiBeginning + 18, apiEnd - 3);
-
-    let beginning = data.indexOf("responseContext");
-    let firstString = data.substring(beginning - 2);
-    let end = firstString.indexOf("</script>");
-    let finalString = firstString.substring(0, end - 1);
-    let stringToJson = JSON.parse(finalString);
-    let contentObj =
-      stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
-        .sectionListRenderer.contents[0].itemSectionRenderer.contents;
-
-    let content = [];
-
-    contentObj.forEach((item) => {
-      if (item.videoRenderer) {
-        const vidItem = item.videoRenderer;
-        const title = vidItem.title.runs[0].text;
-        const channel = vidItem.ownerText.runs[0].text;
-        const thumbnailUrl = vidItem.thumbnail.thumbnails;
-        const avatarUrl =
-          vidItem.channelThumbnailSupportedRenderers
-            .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
-        const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
-        const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
-        const length = vidItem.lengthText?.simpleText ?? "";
-        const videoId = vidItem.videoId;
-
-        content.push({
-          title: title,
-          channel: channel,
-          viewCount: viewCount,
-          uploadDate: uploadDate,
-          length: length,
-          videoId: videoId,
-          thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
-          avatarUrl: avatarUrl[avatarUrl.length - 1].url,
-          // apiKey: apiKey,
-          // cookie: null,
-        });
-      }
-    });
-
-    return content;
-  }
-};
+const { initialSearchResponseParser } = require("../functions/parseHandler");
 
 exports.fetchAutoSearch = async (req, res) => {
   const term = req.query.q;
@@ -82,9 +30,14 @@ exports.fetchSearch = async (req, res, next) => {
     .then(function (response) {
       const data = response.data;
       if (data) {
-        let content = initialSearchResponseParser(data);
-        if (content.length > 0) {
-          res.json(content);
+        let resObj = initialSearchResponseParser(data);
+
+        if (
+          resObj &&
+          resObj.content.length > 0 &&
+          resObj.content[0].content.length > 0
+        ) {
+          res.json(resObj);
         } else {
           res.sendStatus(500);
         }
@@ -98,38 +51,3 @@ exports.fetchSearch = async (req, res, next) => {
       next(error);
     });
 };
-// exports.fetchSearch = async (req, res) => {
-//   const query = req.query.q;
-//   const app = req.app;
-
-//   // Start Puppeteer Browser
-//   const browser = await puppeteer.launch({ headless: false });
-//   app.set("browser", browser);
-
-//   let paginatePage = await browser.newPage();
-//   app.set("paginatePage", paginatePage);
-
-//   paginatePage.on("response", async (response) => {
-//     if (
-//       response
-//         .url()
-//         .includes(`https://www.youtube.com/results?search_query=${query}`)
-//     ) {
-//       console.log("DATA HERE");
-//       // let data = await response.json();
-//       let resData = await response.text();
-//       let content = initialSearchResponseParser(resData);
-
-//       res.json(content);
-//     }
-//   });
-
-//   paginatePage
-//     .goto(`https://www.youtube.com/results?search_query=${query}`, {
-//       waitUntil: "networkidle2",
-//     })
-//     .then(() => {
-//       console.log("WHATS GOING ON");
-//       app.set("paginateLoadingComplete", true);
-//     });
-// };
