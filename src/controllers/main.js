@@ -1,5 +1,8 @@
 const axios = require("axios");
-const { initialSearchResponseParser } = require("../functions/parseHandler");
+const {
+  initialSearchResponseParser,
+  videoParser,
+} = require("../functions/parseHandler");
 
 exports.fetchAutoSearch = async (req, res) => {
   const term = req.query.q;
@@ -37,7 +40,7 @@ exports.fetchSearch = async (req, res, next) => {
           resObj.content.length > 0 &&
           resObj.content[0].content.length > 0
         ) {
-          res.json(resObj);
+          res.json({...resObj, query: query});
         } else {
           res.sendStatus(500);
         }
@@ -46,8 +49,41 @@ exports.fetchSearch = async (req, res, next) => {
       }
     })
     .catch(function (error) {
-      // handle error
-      // console.log(error);
+      next(error);
+    });
+};
+
+exports.postSearchContinuation = async (req, res, next) => {
+  const { client, token, key, query } = req.body;
+
+  await axios
+    .post(
+      `https://www.youtube.com/youtubei/v1/search?key=${key}&prettyPrint=false`,
+      { continuation: token, context: { client: client } }
+    )
+    .then(function (response) {
+      const data = response.data;
+      if (data) {
+        let newToken =
+          data.onResponseReceivedCommands[0].appendContinuationItemsAction
+            .continuationItems[1].continuationItemRenderer.continuationEndpoint
+            .continuationCommand.token;
+
+        let newContent =
+          data.onResponseReceivedCommands[0].appendContinuationItemsAction
+            .continuationItems[0].itemSectionRenderer.contents;
+
+        let contentParsed = videoParser(newContent);
+
+        if (contentParsed && contentParsed.length > 0 && newToken) {
+          res.json({ token: newToken, content: contentParsed, query: query });
+        } else {
+          res.sendStatus(500);
+        }
+      }
+    })
+    .catch(function (error) {
+      // console.log(error)
       next(error);
     });
 };
