@@ -34,7 +34,7 @@ const initialSearchResponseParser = (data) => {
       stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
         .sectionListRenderer.contents[0].itemSectionRenderer.contents;
 
-      let content =  videoParser(contentObj);
+    let content = videoParser(contentObj);
 
     return {
       ...searchClientContext,
@@ -48,35 +48,52 @@ const videoParser = (data) => {
   let content = [];
 
   data.forEach((item) => {
-      if (item.videoRenderer) {
-        const vidItem = item.videoRenderer;
-        const title = vidItem.title.runs[0].text;
-        const channel = vidItem.ownerText.runs[0].text;
-        const thumbnailUrl = vidItem.thumbnail.thumbnails;
-        const avatarUrl =
-          vidItem.channelThumbnailSupportedRenderers
-            .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
-        const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
-        const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
-        const length = vidItem.lengthText?.simpleText ?? "";
-        const videoId = vidItem.videoId;
+    if (item.videoRenderer) {
+      const vidItem = item.videoRenderer;
+      const title = vidItem.title.runs[0].text;
+      const channel = vidItem.ownerText.runs[0].text;
+      const thumbnailUrl = vidItem.thumbnail.thumbnails;
+      const avatarUrl =
+        vidItem.channelThumbnailSupportedRenderers
+          .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
+      const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
+      const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
+      const length = vidItem.lengthText?.simpleText ?? "";
+      const videoId = vidItem.videoId;
 
-        content.push({
-          title: title,
-          channel: channel,
-          viewCount: viewCount,
-          uploadDate: uploadDate,
-          length: length,
-          videoId: videoId,
-          thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
-          avatarUrl: avatarUrl[avatarUrl.length - 1].url,
-          // apiKey: apiKey,
-          // cookie: null,
+      let desc =
+        vidItem.detailedMetadataSnippets?.length > 0
+          && vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 0 ? vidItem.detailedMetadataSnippets[0].snippetText?.runs[0]?.text
+          : "";
+
+      if (vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 1) {
+        const [, ...rest] = vidItem.detailedMetadataSnippets[0].snippetText.runs;
+        rest.forEach((item) => {
+          if (item.text) {
+            desc = desc + item.text;
+            // item.bold ???
+          }
         });
       }
-    });
 
-    return content;
-}
+
+      content.push({
+        title: title,
+        channel: channel,
+        viewCount: viewCount,
+        uploadDate: uploadDate,
+        length: length,
+        videoId: videoId,
+        thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
+        avatarUrl: avatarUrl[avatarUrl.length - 1].url,
+        desc: desc,
+        // apiKey: apiKey,
+        // cookie: null,
+      });
+    }
+  });
+
+  return content;
+};
 
 module.exports = { initialSearchResponseParser, videoParser };

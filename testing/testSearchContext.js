@@ -10,7 +10,7 @@ const testing = async () => {
       const data = response.data;
       if (data) {
         let content = initialSearchResponseParser(data);
-        console.log(content);
+        // console.log(content);
       }
     })
     .catch(function (error) {

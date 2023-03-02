@@ -18,8 +18,7 @@ exports.fetchAutoSearch = async (req, res) => {
       }
     })
     .catch(function (error) {
-      // handle error
-      console.log(error);
+      next(error);
     });
 
   res.json({ data: autoSearchTerms });
@@ -27,10 +26,11 @@ exports.fetchAutoSearch = async (req, res) => {
 
 exports.fetchSearch = async (req, res, next) => {
   const query = req.query.q;
-
+console.log(query.replace(" ", '+'))
   await axios
-    .get(`https://www.youtube.com/results?search_query=${query}`)
+    .get(`https://www.youtube.com/results?search_query=${query.replace(" ", '+')}`)
     .then(function (response) {
+      console.log(response.config.url)
       const data = response.data;
       if (data) {
         let resObj = initialSearchResponseParser(data);
@@ -83,7 +83,6 @@ exports.postSearchContinuation = async (req, res, next) => {
       }
     })
     .catch(function (error) {
-      // console.log(error)
       next(error);
     });
 };
