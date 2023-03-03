@@ -66,7 +66,7 @@ const videoParser = (data) => {
           && vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 0 ? vidItem.detailedMetadataSnippets[0].snippetText?.runs[0]?.text
           : "";
 
-      if (vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 1) {
+      if (desc && vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 1) {
         const [, ...rest] = vidItem.detailedMetadataSnippets[0].snippetText.runs;
         rest.forEach((item) => {
           if (item.text) {

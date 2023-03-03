@@ -4,7 +4,7 @@ const {
   videoParser,
 } = require("../functions/parseHandler");
 
-exports.fetchAutoSearch = async (req, res) => {
+exports.fetchAutoSearch = async (req, res, next) => {
   const term = req.query.q;
   const autoSearchTerms = [];
 
