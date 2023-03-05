@@ -23,10 +23,11 @@ app.get("/favicon.ico", (req, res) => res.status(204));
 
 // Routes Import
 const mainRoute = require("./src/routes/main");
-const { videoParser } = require("./src/functions/parseHandler");
+const homeRoute = require("./src/routes/home");
 
 // Set Routes
 app.use("/main", mainRoute);
+app.use("/home", homeRoute);
 
 const PORT = process.env.PORT || 8000;
 

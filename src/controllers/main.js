@@ -26,7 +26,7 @@ exports.fetchAutoSearch = async (req, res, next) => {
 
 exports.fetchSearch = async (req, res, next) => {
   const query = req.query.q;
-console.log(query.replace(" ", '+'))
+
   await axios
     .get(`https://www.youtube.com/results?search_query=${query.replace(" ", '+')}`)
     .then(function (response) {
@@ -37,8 +37,8 @@ console.log(query.replace(" ", '+'))
 
         if (
           resObj &&
-          resObj.content.length > 0 &&
-          resObj.content[0].content.length > 0
+          resObj.content &&
+          resObj.content.content?.length > 0
         ) {
           res.json({...resObj, query: query});
         } else {

@@ -1,7 +1,10 @@
 const axios = require("axios");
-const { initialSearchResponseParser } = require("../src/functions/parseHandler");
+const {
+  initialSearchResponseParser,
+  videoParser,
+} = require("../src/functions/parseHandler");
 
-const testing = async () => {
+const testingSearch = async () => {
   let query = "lmp2";
 
   await axios
@@ -18,4 +21,19 @@ const testing = async () => {
     });
 };
 
-testing();
+const testingHome = async () => {
+  await axios
+    .get(`https://www.youtube.com/`)
+    .then(function (response) {
+      const data = response.data;
+      if (data) {
+        let content = initialSearchResponseParser(data, 'homepage');
+        console.log(content.content);
+      }
+    })
+    .catch(function (error) {
+      console.log(error);
+    });
+};
+
+testingHome();

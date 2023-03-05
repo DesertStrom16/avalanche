@@ -1,6 +1,6 @@
-const initialSearchResponseParser = (data) => {
+const initialSearchResponseParser = (data, page) => {
   if (data) {
-    // Scrape api key
+    // API key
     let apiBeginning = data.indexOf("innertubeApiKey");
     let apiEnd = data.indexOf("innertubeApiVersion");
     const apiKey = data.substring(apiBeginning + 18, apiEnd - 3);
@@ -30,15 +30,29 @@ const initialSearchResponseParser = (data) => {
     let end = firstString.indexOf("</script>");
     let finalString = firstString.substring(0, end - 1);
     let stringToJson = JSON.parse(finalString);
-    let contentObj =
-      stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
-        .sectionListRenderer.contents[0].itemSectionRenderer.contents;
+
+    let contentObj;
+
+    if (page === "homepage") {
+      contentObj = []
+      stringToJson.contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.richGridRenderer.contents.map(
+        (item) => {
+          if (item.richItemRenderer) {
+            contentObj.push(item.richItemRenderer.content);
+          }
+        }
+      );
+    } else {
+      contentObj =
+        stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
+          .sectionListRenderer.contents[0].itemSectionRenderer.contents;
+    }
 
     let content = videoParser(contentObj);
 
     return {
       ...searchClientContext,
-      content: [{ ...continuationToken, content: content }],
+      content: { ...continuationToken, content: content },
       key: apiKey,
     };
   }
@@ -62,12 +76,17 @@ const videoParser = (data) => {
       const videoId = vidItem.videoId;
 
       let desc =
-        vidItem.detailedMetadataSnippets?.length > 0
-          && vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 0 ? vidItem.detailedMetadataSnippets[0].snippetText?.runs[0]?.text
+        vidItem.detailedMetadataSnippets?.length > 0 &&
+        vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 0
+          ? vidItem.detailedMetadataSnippets[0].snippetText?.runs[0]?.text
           : "";
 
-      if (desc && vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 1) {
-        const [, ...rest] = vidItem.detailedMetadataSnippets[0].snippetText.runs;
+      if (
+        desc &&
+        vidItem.detailedMetadataSnippets[0].snippetText.runs.length > 1
+      ) {
+        const [, ...rest] =
+          vidItem.detailedMetadataSnippets[0].snippetText.runs;
         rest.forEach((item) => {
           if (item.text) {
             desc = desc + item.text;
@@ -75,7 +94,6 @@ const videoParser = (data) => {
           }
         });
       }
-
 
       content.push({
         title: title,
