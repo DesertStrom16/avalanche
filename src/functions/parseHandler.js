@@ -68,8 +68,7 @@ const videoParser = (data) => {
       const channel = vidItem.ownerText.runs[0].text;
       const thumbnailUrl = vidItem.thumbnail.thumbnails;
       const avatarUrl =
-        vidItem.channelThumbnailSupportedRenderers
-          .channelThumbnailWithLinkRenderer.thumbnail.thumbnails;
+        vidItem.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer.thumbnail.thumbnails ?? '';
       const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
       const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
       const length = vidItem.lengthText?.simpleText ?? "";
@@ -103,7 +102,7 @@ const videoParser = (data) => {
         length: length,
         videoId: videoId,
         thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
-        avatarUrl: avatarUrl[avatarUrl.length - 1].url,
+        avatarUrl: avatarUrl[avatarUrl.length - 1]?.url,
         desc: desc,
         // apiKey: apiKey,
         // cookie: null,

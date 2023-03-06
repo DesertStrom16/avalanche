@@ -30,7 +30,7 @@ exports.fetchSearch = async (req, res, next) => {
   await axios
     .get(`https://www.youtube.com/results?search_query=${query.replace(" ", '+')}`)
     .then(function (response) {
-      console.log(response.config.url)
+      // console.log(response.config.url)
       const data = response.data;
       if (data) {
         let resObj = initialSearchResponseParser(data);
