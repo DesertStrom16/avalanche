@@ -3,6 +3,8 @@ const {
   initialSearchResponseParser,
   videoParser,
 } = require("../functions/parseHandler");
+const { apiKeyParser } = require("../functions/apiKeyHandler");
+const { clientContextParser } = require("../functions/clientContextHandler");
 
 exports.fetchRecommended = async (req, res, next) => {
   const videoId = req.query.v;
@@ -12,28 +14,63 @@ exports.fetchRecommended = async (req, res, next) => {
     .then(function (response) {
       const data = response.data;
       if (data) {
-     
-        let firstRenderer = data.indexOf("compactVideoRenderer");
-        let firstRenderString = data.substring(firstRenderer)
-        let realEnd = firstRenderString.lastIndexOf("compactVideoRenderer")
-        let finalString = firstRenderString.substring(0, realEnd - 3);
+        let apiKey = apiKeyParser(data);
+        let client = clientContextParser(data);
 
-        res.json({ data: finalString });
-        console.log(finalString)
-      
-        // let beginning = data.indexOf("responseContext");
-        // let firstString = data.substring(beginning - 2);
-        // let end = firstString.indexOf("</script>");
-        // let finalString = firstString.substring(0, end - 1);
-        // let stringToJson = JSON.parse(finalString);
+        let firstIndex = data.indexOf(`ytInitialData = {"responseContext"`);
+        let firstString = data.substring(firstIndex + 16);
 
-        // res.json({ data: stringToJson });
-        // console.log(resObj)
-        // if (resObj && resObj.content && resObj.content.content?.length > 0) {
-        //   res.json({ ...resObj });
-        // } else {
-        //   res.sendStatus(500);
-        // }
+        let lastIndex = firstString.indexOf("</script>");
+        let lastString = firstString.substring(0, lastIndex - 1);
+        let resString = JSON.parse(lastString);
+
+        let vidData =
+          resString.contents.twoColumnWatchNextResults.secondaryResults
+            .secondaryResults.results;
+
+        let content = [];
+        let contToken;
+
+        vidData.forEach((item, index) => {
+          if (item.compactVideoRenderer) {
+            const vidItem = item.compactVideoRenderer;
+            const title = vidItem.title.simpleText ?? "";
+            const channel = vidItem.longBylineText.runs[0].text;
+            const thumbnailUrl = vidItem.thumbnail.thumbnails;
+            const avatarUrl = vidItem.channelThumbnail.thumbnails ?? "";
+            const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
+            const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
+            const length = vidItem.lengthText?.simpleText ?? "";
+            const videoId = vidItem.videoId;
+
+            content.push({
+              title: title,
+              channel: channel,
+              viewCount: viewCount,
+              uploadDate: uploadDate,
+              length: length,
+              videoId: videoId,
+              thumbnailUrl: thumbnailUrl[thumbnailUrl.length - 1].url,
+              avatarUrl: avatarUrl[avatarUrl.length - 1]?.url,
+            });
+          } else if (item.continuationItemRenderer) {
+            contToken =
+              item.continuationItemRenderer.continuationEndpoint
+                .continuationCommand.token;
+          }
+        });
+
+        let resObj = {
+          content: { token: contToken, content: content },
+          ...client,
+          key: apiKey,
+        };
+
+        if (resObj && resObj.content && resObj.content.content?.length > 0) {
+          res.json(resObj);
+        } else {
+          res.sendStatus(500);
+        }
       }
     })
     .catch(function (error) {
