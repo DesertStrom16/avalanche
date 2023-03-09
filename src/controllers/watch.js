@@ -24,6 +24,10 @@ exports.fetchRecommended = async (req, res, next) => {
         let lastString = firstString.substring(0, lastIndex - 1);
         let resString = JSON.parse(lastString);
 
+        const watchTitle =
+        resString.contents.twoColumnWatchNextResults.results.results.contents[0]
+            .videoPrimaryInfoRenderer.title.runs[0].text;
+
         let vidData =
           resString.contents.twoColumnWatchNextResults.secondaryResults
             .secondaryResults.results;
@@ -64,13 +68,15 @@ exports.fetchRecommended = async (req, res, next) => {
           content: { token: contToken, content: content },
           ...client,
           key: apiKey,
+          watchTitle: watchTitle,
         };
 
-        if (resObj && resObj.content && resObj.content.content?.length > 0) {
+        if (resObj && resObj.content && resObj.content.content?.length > 0 && watchTitle) {
           res.json(resObj);
         } else {
           res.sendStatus(500);
         }
+        // res.json(resString);
       }
     })
     .catch(function (error) {
