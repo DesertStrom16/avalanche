@@ -37,4 +37,4 @@ app.use("/watch", watchRoute);
 app.listen(`0.0.0.0:$PORT`);
 
 console.log("----------------------");
-console.log(`Listening on Port ${PORT}`);
+console.log(`Listening on Port $PORT`);
