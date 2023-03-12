@@ -31,10 +31,10 @@ app.use("/main", mainRoute);
 app.use("/home", homeRoute);
 app.use("/watch", watchRoute);
 
-const PORT = process.env.PORT || 8000;
+// const PORT = process.env.PORT || 8000;
 
 // ---- Uninstall Puppeteer and Cheerio ----
-app.listen(PORT);
+app.listen(`0.0.0.0:$PORT`);
 
 console.log("----------------------");
 console.log(`Listening on Port ${PORT}`);
