@@ -34,7 +34,7 @@ app.use("/watch", watchRoute);
 // const PORT = process.env.PORT || 8000;
 
 // ---- Uninstall Puppeteer and Cheerio ----
-app.listen(`0.0.0.0:$PORT`);
+app.listen(`${PORT}`);
 
 console.log("----------------------");
-console.log(`Listening on Port $PORT`);
+console.log(`Listening on Port ${PORT}`);
