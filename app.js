@@ -25,11 +25,13 @@ app.get("/favicon.ico", (req, res) => res.status(204));
 const mainRoute = require("./src/routes/main");
 const homeRoute = require("./src/routes/home");
 const watchRoute = require("./src/routes/watch");
+const channelRoute = require("./src/routes/channel");
 
 // Set Routes
 app.use("/main", mainRoute);
 app.use("/home", homeRoute);
 app.use("/watch", watchRoute);
+app.use("/channel", channelRoute);
 
 // ---- Uninstall Puppeteer and Cheerio ----
 app.listen(process.env.PORT);

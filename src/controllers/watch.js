@@ -24,9 +24,67 @@ exports.fetchRecommended = async (req, res, next) => {
         let lastString = firstString.substring(0, lastIndex - 1);
         let resString = JSON.parse(lastString);
 
+        // Not sure any of this is needed
+        // let firstIndexChannel = data.indexOf(`ytInitialPlayerResponse = {"responseContext"`);
+        // let firstStringChannel = data.substring(firstIndexChannel + 26);
+
+        // let lastIndexChannel = firstStringChannel.indexOf("</script>");
+        // let lastStringChannel = firstStringChannel.substring(0, lastIndexChannel - 1);
+        // let resStringChannel = JSON.parse(lastStringChannel);
+        // const channelName = resStringChannel.videoDetails.author
+
+        // INFO HERE
+        // This is the video being watched information:
+        // resString.contents.twoColumnWatchNextResults.results.results.contents[0]
+
+        // This is the list of recommended videos for the video that's playing:
+        // resString.contents.twoColumnWatchNextResults.secondaryResults.secondaryResults.results
+
+        // Not sure why I thought I needed this?
+        // const channelUrl = resString.engagementPanels[2].engagementPanelSectionListRenderer.content.structuredDescriptionContentRenderer.items[0].videoDescriptionHeaderRenderer.channelThumbnail.thumbnails[0].url
+
         const watchTitle =
-        resString.contents.twoColumnWatchNextResults.results.results.contents[0]
-            .videoPrimaryInfoRenderer.title.runs[0].text;
+          resString.contents.twoColumnWatchNextResults.results.results
+            .contents[0].videoPrimaryInfoRenderer.title.runs[0].text;
+
+        console.log(
+          resString.contents.twoColumnWatchNextResults.results.results
+            .contents[0].videoPrimaryInfoRenderer.viewCount
+        );
+
+        const videoViewCountAllOptions =
+          resString.contents.twoColumnWatchNextResults.results.results
+            .contents[0].videoPrimaryInfoRenderer.viewCount
+            .videoViewCountRenderer;
+
+        const videoViewCount = videoViewCountAllOptions.shortViewCount?.simpleText ? videoViewCountAllOptions.shortViewCount?.simpleText : videoViewCountAllOptions.extraShortViewCount?.simpleText
+
+        // const videoViewCount =
+        //   resString.contents.twoColumnWatchNextResults.results.results
+        //     .contents[0].videoPrimaryInfoRenderer.viewCount
+        //     .videoViewCountRenderer.shortViewCount.simpleText;
+
+        const videoDateText =
+          resString.contents.twoColumnWatchNextResults.results.results
+            .contents[0].videoPrimaryInfoRenderer.relativeDateText.simpleText;
+
+        // Secondary has description with show more/show less, thumbnail urls with different sizes, etc.
+        const secondaryVideoInfo =
+          resString.contents.twoColumnWatchNextResults.results.results
+            .contents[1].videoSecondaryInfoRenderer;
+
+        const channelCannonicalURL =
+          secondaryVideoInfo.owner.videoOwnerRenderer.navigationEndpoint
+            .browseEndpoint.canonicalBaseUrl;
+        const videoDescription =
+          secondaryVideoInfo.attributedDescription.content;
+        const channelSubCount =
+          secondaryVideoInfo.owner.videoOwnerRenderer.subscriberCountText
+            .simpleText.replace("subscribers", "");
+        const channelTitle =
+          secondaryVideoInfo.owner.videoOwnerRenderer.title.runs[0].text;
+        const channelThumbnail =
+          secondaryVideoInfo.owner.videoOwnerRenderer.thumbnail.thumbnails;
 
         let vidData =
           resString.contents.twoColumnWatchNextResults.secondaryResults
@@ -47,6 +105,7 @@ exports.fetchRecommended = async (req, res, next) => {
             const length = vidItem.lengthText?.simpleText ?? "";
             const videoId = vidItem.videoId;
 
+            // content in this context is the recommended videos
             content.push({
               title: title,
               channel: channel,
@@ -68,10 +127,24 @@ exports.fetchRecommended = async (req, res, next) => {
           content: { token: contToken, content: content },
           ...client,
           key: apiKey,
-          watchTitle: watchTitle,
+          watchTitle,
+          channelCannonicalURL,
+          videoDescription,
+          channelSubCount,
+          channelTitle,
+          channelThumbnail,
+          videoViewCount,
+          videoDateText,
+          secondaryVideoInfo: secondaryVideoInfo,
+          resString: resString,
         };
 
-        if (resObj && resObj.content && resObj.content.content?.length > 0 && watchTitle) {
+        if (
+          resObj &&
+          resObj.content &&
+          resObj.content.content?.length > 0 &&
+          watchTitle
+        ) {
           res.json(resObj);
         } else {
           res.sendStatus(500);
