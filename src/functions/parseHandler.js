@@ -23,7 +23,6 @@ const initialSearchResponseParser = (data, page) => {
     );
 
     let searchClientContext = JSON.parse(contextLastString + "}");
-
     // Retrieve Videos for Search
     let beginning = data.indexOf("responseContext");
     let firstString = data.substring(beginning - 2);
@@ -32,9 +31,10 @@ const initialSearchResponseParser = (data, page) => {
     let stringToJson = JSON.parse(finalString);
 
     let contentObj;
+    let channelInfo;
 
     if (page === "homepage") {
-      contentObj = []
+      contentObj = [];
       stringToJson.contents.twoColumnBrowseResultsRenderer.tabs[0].tabRenderer.content.richGridRenderer.contents.map(
         (item) => {
           if (item.richItemRenderer) {
@@ -42,6 +42,20 @@ const initialSearchResponseParser = (data, page) => {
           }
         }
       );
+    } else if (page === "channel") {
+      let preLoopedContent =
+        stringToJson.contents.twoColumnBrowseResultsRenderer.tabs[1].tabRenderer
+          .content.richGridRenderer;
+
+      contentObj = [];
+      preLoopedContent.contents.forEach((item) => {
+        // TODO
+        // Better way to do this other than looping twice.
+        if (item.richItemRenderer?.content) {
+          contentObj.push(item.richItemRenderer?.content);
+        }
+      });
+      channelInfo = stringToJson.metadata.channelMetadataRenderer;
     } else {
       contentObj =
         stringToJson.contents.twoColumnSearchResultsRenderer.primaryContents
@@ -49,10 +63,24 @@ const initialSearchResponseParser = (data, page) => {
     }
 
     let content = videoParser(contentObj);
+    let channelInfoFinal = {};
+
+    if (page === "channel") {
+      channelInfoFinal = {
+        channelInfo: {
+          title: channelInfo.title,
+          avatarThumbnail: channelInfo.avatar.thumbnails[0],
+        },
+      };
+    }
 
     return {
       ...searchClientContext,
-      content: { ...continuationToken, content: content },
+      content: {
+        ...continuationToken,
+        content: content,
+        ...channelInfoFinal,
+      },
       key: apiKey,
     };
   }
@@ -60,15 +88,28 @@ const initialSearchResponseParser = (data, page) => {
 
 const videoParser = (data) => {
   let content = [];
+  let channelTemp;
 
   data.forEach((item) => {
     if (item.videoRenderer) {
       const vidItem = item.videoRenderer;
       const title = vidItem.title.runs[0].text;
-      const channel = vidItem.ownerText.runs[0].text;
+
+      // console.log(vidItem)
+
+      if (vidItem.ownerText) {
+        channelTemp = vidItem.ownerText.runs[0].text;
+      } else {
+        // TODO
+        // reformat this using typescript so we can change the object makeup without confusion across endpoints.
+        channelTemp = "N/A";
+      }
+
+      const channel = channelTemp;
       const thumbnailUrl = vidItem.thumbnail.thumbnails;
       const avatarUrl =
-        vidItem.channelThumbnailSupportedRenderers?.channelThumbnailWithLinkRenderer.thumbnail.thumbnails ?? '';
+        vidItem.channelThumbnailSupportedRenderers
+          ?.channelThumbnailWithLinkRenderer.thumbnail.thumbnails ?? "";
       const viewCount = vidItem.shortViewCountText?.simpleText ?? "";
       const uploadDate = vidItem.publishedTimeText?.simpleText ?? "";
       const length = vidItem.lengthText?.simpleText ?? "";
